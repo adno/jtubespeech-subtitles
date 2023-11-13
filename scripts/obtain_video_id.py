@@ -17,12 +17,15 @@ def parse_args():
   parser.add_argument("wordlist", type=str, help="filename of word list")
   parser.add_argument("--outdir", type=str, default="videoid", help="dirname to save video IDs")
   parser.add_argument("--wait",   type=float, default=0.0, help="seconds to wait between words (default: 0.0)")
+  parser.add_argument("--keep-alive", action=argparse.BooleanOptionalAction, default=True)
   return parser.parse_args(sys.argv[1:])
 
 
-def obtain_video_id(lang, fn_word, outdir="videoid", wait_sec=0.2):
+def obtain_video_id(lang, fn_word, outdir="videoid", wait_sec=0.2, keep_alive=True):
   fn_videoid = Path(outdir) / lang / f"{Path(fn_word).stem}.txt"
   fn_videoid.parent.mkdir(parents=True, exist_ok=True)
+
+  get_url = requests.Session().get if keep_alive else requests.get
 
   with open(fn_videoid, "w") as f:
     for word in tqdm(list(open(fn_word, "r").readlines())):
@@ -51,5 +54,6 @@ def obtain_video_id(lang, fn_word, outdir="videoid", wait_sec=0.2):
 if __name__ == "__main__":
   args = parse_args()
 
-  filename = obtain_video_id(args.lang, args.wordlist, args.outdir, wait_sec=args.wait)
+  filename = obtain_video_id(args.lang, args.wordlist, args.outdir,
+    wait_sec=args.wait, keep_alive=args.keep_alive)
   print(f"save {args.lang.upper()} video IDs to {filename}.")
