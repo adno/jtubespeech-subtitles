@@ -1,11 +1,12 @@
 import time
-import requests
+# DELETEME import requests
 import argparse
-import re
+# DELETEME import re
 import sys
-import subprocess
+# DELETEME import subprocess
+from yt_dlp import YoutubeDL
 from pathlib import Path
-from util import make_video_url, get_subtitle_language
+from util import make_video_url # DELETEME, get_subtitle_language
 import pandas as pd
 from tqdm import tqdm
 
@@ -32,33 +33,52 @@ def retrieve_subtitle_exists(lang, fn_videoid, outdir="sub", wait_sec=0.0, fn_ch
   else:
     subtitle_exists = pd.read_csv(fn_checkpoint)
 
-  # load video ID list
-  n_video = 0
-  for videoid in tqdm(open(fn_videoid).readlines()):
-    videoid = videoid.strip(" ").strip("\n")
-    if videoid in set(subtitle_exists["videoid"]):
-      continue
+  # Options corresponding to:
+  # --list-subs --sub-lang {lang} --skip-download
+  # --extractor-args youtube:player-client=web
+  # including CLI defaults (some of which may not be necessary).
+  ydl_opts = {'extract_flat': 'discard_in_playlist',
+     'extractor_args': {'youtube': {'player_client': ['web']}},
+     'fragment_retries': 10,
+     'ignoreerrors': 'only_download',
+     # 'listsubtitles': True, --- not necessary, only affects stdout
+     'postprocessors': [{'key': 'FFmpegConcat',
+                         'only_multi_video': True,
+                         'when': 'playlist'}],
+     'retries': 10,
+     'skip_download': True,
+     'subtitleslangs': [f'{lang}']}
+  with YoutubeDL(ydl_opts) as ydl:
+    # load video ID list
+    n_video = 0
+    for videoid in tqdm(open(fn_videoid).readlines()):
+      videoid = videoid.strip(" ").strip("\n")
+      if videoid in set(subtitle_exists["videoid"]):
+        continue
 
-    # send query to YouTube
-    url = make_video_url(videoid)
-    try:
-      result = subprocess.check_output(f"yt-dlp --list-subs --sub-lang {lang} --skip-download {url}", \
-        shell=True, universal_newlines=True)
-      auto_lang, manu_lang = get_subtitle_language(result)
-      subtitle_exists = subtitle_exists.append( \
-        {"videoid": videoid, "auto": lang in auto_lang, "sub": lang in manu_lang},
-        ignore_index=True)
-      n_video += 1
-    except:
-      pass
+      # send query to YouTube
+      url = make_video_url(videoid)
+      try:
+        # DELETEME result = subprocess.check_output(f"yt-dlp --list-subs --sub-lang {lang} --skip-download {url}", \
+        #  shell=True, universal_newlines=True)
+        # DELETEME auto_lang, manu_lang = get_subtitle_language(result)
+        info = ydl.extract_info(url, download=False)
+        manu_lang = info['subtitles']
+        auto_lang = info['automatic_captions']
+        subtitle_exists = subtitle_exists.append( \
+          {"videoid": videoid, "auto": lang in auto_lang, "sub": lang in manu_lang},
+          ignore_index=True)
+        n_video += 1
+      except:
+        pass
 
-    # write current result
-    if n_video % 100 == 0:
-      subtitle_exists.to_csv(fn_sub, index=None)
+      # write current result
+      if n_video % 100 == 0:
+        subtitle_exists.to_csv(fn_sub, index=None)
 
-    # sleep
-    if wait_sec > 0.01:
-      time.sleep(wait_sec)
+      # sleep
+      if wait_sec > 0.01:
+        time.sleep(wait_sec)
 
   # write
   subtitle_exists.to_csv(fn_sub, index=None)
