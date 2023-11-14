@@ -20,18 +20,43 @@ def parse_args():
   parser.add_argument("--outdir",     type=str, default="sub", help="dirname to save results")
   parser.add_argument("--checkpoint", type=str, default=None, help="filename of list checkpoint (for restart retrieving)")
   parser.add_argument("--wait",       type=float, default=0.0, help="seconds to wait between videos (default: 0.0)")
+  parser.add_argument("--header",     action=argparse.BooleanOptionalAction, default=True, help='output header (default: true)')
+  parser.add_argument("--intermediate", action=argparse.BooleanOptionalAction, default=False, help='output intermediate results (default: false)')
   return parser.parse_args(sys.argv[1:])
 
 
-def retrieve_subtitle_exists(lang, fn_videoid, outdir="sub", wait_sec=0.0, fn_checkpoint=None):
+COLS = [
+  'videoid', 'auto', 'sub', 'categories', 'duration',
+  'view_count', 'upload_date', 'channel_id', 'uploader_id', 'language'
+  ]
+
+def retrieve_subtitle_exists(lang, fn_videoid, outdir="sub", wait_sec=0.0,
+                             fn_checkpoint=None, header=True, intermediate=False):
   fn_sub = Path(outdir) / lang / f"{Path(fn_videoid).stem}.csv"
   fn_sub.parent.mkdir(parents=True, exist_ok=True)
 
+  # all info fields:
+  i_vid = []
+  i_auto = []
+  i_sub = []
+  i_cat = []
+  i_dur = []
+  i_vc = []
+  i_ud = []
+  i_cid = []
+  i_uid = []
+  i_lang = []
+
   # if file exists, load it and restart retrieving.
   if fn_checkpoint is None:
-    subtitle_exists = pd.DataFrame({"videoid": [], "auto": [], "sub": []}, dtype=str)
+    pass
+    # subtitle_exists = pd.DataFrame({"videoid": [], "auto": [], "sub": []}, dtype=str)
   else:
-    subtitle_exists = pd.read_csv(fn_checkpoint)
+    sys.exit(1) # TODO appending not implemented
+    df = (
+      pd.read_csv(fn_checkpoint) if header else
+      pd.read_csv(fn_checkpoint, names=COLS)
+      )
 
   # Options corresponding to:
   # --list-subs --sub-lang {lang} --skip-download
@@ -53,8 +78,9 @@ def retrieve_subtitle_exists(lang, fn_videoid, outdir="sub", wait_sec=0.0, fn_ch
     n_video = 0
     for videoid in tqdm(open(fn_videoid).readlines()):
       videoid = videoid.strip(" ").strip("\n")
-      if videoid in set(subtitle_exists["videoid"]):
-        continue
+      # TODO appending not implemented
+      # if videoid in set(subtitle_exists["videoid"]):
+      #  continue
 
       # send query to YouTube
       url = make_video_url(videoid)
@@ -65,28 +91,63 @@ def retrieve_subtitle_exists(lang, fn_videoid, outdir="sub", wait_sec=0.0, fn_ch
         info = ydl.extract_info(url, download=False)
         manu_lang = info['subtitles']
         auto_lang = info['automatic_captions']
-        subtitle_exists = subtitle_exists.append( \
-          {"videoid": videoid, "auto": lang in auto_lang, "sub": lang in manu_lang},
-          ignore_index=True)
+
+        i_vid.append(videoid)
+        i_auto.append(lang in auto_lang)
+        i_sub.append(lang in manu_lang)
+        i_cat.append('|'.join(info['categories']))
+        i_dur.append(info['duration'])
+        i_vc.append(info['view_count'])
+        i_ud.append(info['upload_date'])
+        i_cid.append(info['channel_id'])
+        i_uid.append(info['uploader_id'])
+        i_lang.append(info['language'])
+
         n_video += 1
       except:
         pass
 
       # write current result
-      if n_video % 100 == 0:
-        subtitle_exists.to_csv(fn_sub, index=None)
+      if intermediate and (n_video % 100 == 0):
+        df = pd.DataFrame({
+          'videoid': i_vid,
+          'auto': i_auto,
+          'sub': i_sub,
+          'categories': i_cat,
+          'duration': i_dur,
+          'view_count': i_vc,
+          'upload_date': i_ud,
+          'channel_id': i_cid,
+          'uploader_id': i_uid,
+          'language': i_lang
+          })
+        df.to_csv(fn_sub, index=None, header=header)
 
       # sleep
       if wait_sec > 0.01:
         time.sleep(wait_sec)
 
   # write
-  subtitle_exists.to_csv(fn_sub, index=None)
+
+  df = pd.DataFrame({
+    'videoid': i_vid,
+    'auto': i_auto,
+    'sub': i_sub,
+    'categories': i_cat,
+    'duration': i_dur,
+    'view_count': i_vc,
+    'upload_date': i_ud,
+    'channel_id': i_cid,
+    'uploader_id': i_uid,
+    'language': i_lang
+    })
+  df.to_csv(fn_sub, index=None, header=header)
   return fn_sub
 
 if __name__ == "__main__":
   args = parse_args()
 
   filename = retrieve_subtitle_exists(args.lang, args.videoidlist, \
-    args.outdir, fn_checkpoint=args.checkpoint, wait_sec=args.wait)
+    args.outdir, fn_checkpoint=args.checkpoint, wait_sec=args.wait, header=args.header,
+    intermediate=args.intermediate)
   print(f"save {args.lang.upper()} subtitle info to {filename}.")

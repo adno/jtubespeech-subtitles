@@ -36,4 +36,4 @@ TASKNO="$(printf '%06d' $TASKNO)"
 TASKS="videoid/tasks_jaenpses_part$TASKNO"
 LOG="retrieve_${TASKNO}.log"
  
-parallel --joblog "$LOG" --colsep ',' python scripts/retrieve_subtitle_exists.py  < "$TASKS"
+parallel --joblog "$LOG" --colsep ',' python scripts/retrieve_subtitle_exists.py --no-header < "$TASKS"
