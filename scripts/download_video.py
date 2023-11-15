@@ -17,6 +17,8 @@ def parse_args():
   )
   parser.add_argument("lang",         type=str, help="language code (ja, en, ...)")
   parser.add_argument("sublist",      type=str, help="filename of list of video IDs with subtitles")
+  parser.add_argument("--start",      type=int, default=0,    help="start index")
+  parser.add_argument("--size",       type=int, default=None, help="maximum number of items do download (starting at --start; default: no limit)")
   parser.add_argument("--outdir",     type=str, default="video", help="dirname to save videos")
   parser.add_argument("--keeporg",    action='store_true', default=False, help="keep original audio file.")
   parser.add_argument("--wait",       type=float, default=0.0, help="seconds to wait between videos (default: 0.0)")
@@ -24,7 +26,10 @@ def parse_args():
   return parser.parse_args(sys.argv[1:])
 
 
-def download_video(lang, fn_sub, outdir="video", wait_sec=10, keep_org=False, subs_only=False):
+def download_video(
+  lang, fn_sub, outdir="video", wait_sec=10, keep_org=False, subs_only=False,
+  start=0, size=None
+  ):
   """
   Tips:
     If you want to download automatic subtitles instead of manual subtitles, please change as follows.
@@ -34,7 +39,14 @@ def download_video(lang, fn_sub, outdir="video", wait_sec=10, keep_org=False, su
       4 (optional). change fn["vtt"] (path to save subtitle) to another.
   """
 
+  assert start >= 0, start
+  assert size is None or size >= 1, size
+
   sub = pd.read_csv(fn_sub)
+
+  # e.g. start=0,size=1 => stop=0 (pandas uses inclusive indexing)
+  stop = None if (size is None) else (start + size - 1)
+  sub = sub.loc[start:stop]
 
   dl_path_tmpl = str(
     Path(outdir) / lang / ('txt' if subs_only else 'wav') / '%(id).2s' / '%(id)s.%(ext)s'
@@ -125,6 +137,7 @@ if __name__ == "__main__":
 
   dirname = download_video(
     args.lang, args.sublist, args.outdir,
-    keep_org=args.keeporg, wait_sec=args.wait, subs_only=args.subtitles_only
+    keep_org=args.keeporg, wait_sec=args.wait, subs_only=args.subtitles_only,
+    start=args.start, size=args.size
     )
   print(f"save {args.lang.upper()} videos to {dirname}.")
