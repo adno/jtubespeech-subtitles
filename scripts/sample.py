@@ -57,6 +57,9 @@ def main(args):
 
     valid = df.loc[cond]
 
+    sys.stderr.write(
+        f'Valid data size: {len(valid)}\n'
+        )
     if len(valid) < args.size:
         sys.stderr.write(
             f'Warning: Data is smaller than the requested sample '
