@@ -37,15 +37,3 @@ TASKS="videoid/tasks_jaenpses_part$TASKNO"
 LOG="retrieve_${TASKNO}.log"
  
 parallel --joblog "$LOG" --colsep ',' python scripts/retrieve_subtitle_exists.py --no-header < "$TASKS"
-
-exit 0
-
-# Sample 120k "valid" vids for each language:
-
-for lang in ja # en ja ps es # fr pt zh it pl de ru cs
-do
-	echo 'videoid,auto,sub,categories,duration,view_count,upload_date,channel_id,uploader_id,language' > sub/${lang}/${lang}_header.csv
-	cat sub/${lang}/${lang}_*.csv > sub/${lang}/${lang}.csv
-	python scripts/sample.py ja sub/${lang}/${lang}.csv
-	# sample saved in sub/${lang}/${lang}_sample.csv
-done
