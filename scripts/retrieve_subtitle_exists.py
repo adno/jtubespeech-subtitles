@@ -9,6 +9,7 @@ from pathlib import Path
 from util import make_video_url # DELETEME, get_subtitle_language
 import pandas as pd
 from tqdm import tqdm
+import logging
 
 def parse_args():
   parser = argparse.ArgumentParser(
@@ -88,24 +89,34 @@ def retrieve_subtitle_exists(lang, fn_videoid, outdir="sub", wait_sec=0.0,
         # DELETEME result = subprocess.check_output(f"yt-dlp --list-subs --sub-lang {lang} --skip-download {url}", \
         #  shell=True, universal_newlines=True)
         # DELETEME auto_lang, manu_lang = get_subtitle_language(result)
-        info = ydl.extract_info(url, download=False)
-        manu_lang = info['subtitles']
-        auto_lang = info['automatic_captions']
 
+        # Exceptions may happen here:
+        info = ydl.extract_info(url, download=False)
+        auto_lang = info['automatic_captions']
+        manu_lang = info['subtitles']
+        cat = '|'.join(info['categories'])
+        dur = info['duration']
+        vc = info['view_count']
+        ud = info['upload_date']
+        cid = info['channel_id']
+        uid = info['uploader_id']
+        lang = info['language']
+
+        # Exceptions should not happen here:
         i_vid.append(videoid)
         i_auto.append(lang in auto_lang)
         i_sub.append(lang in manu_lang)
-        i_cat.append('|'.join(info['categories']))
-        i_dur.append(info['duration'])
-        i_vc.append(info['view_count'])
-        i_ud.append(info['upload_date'])
-        i_cid.append(info['channel_id'])
-        i_uid.append(info['uploader_id'])
-        i_lang.append(info['language'])
+        i_cat.append(cat)
+        i_dur.append(dur)
+        i_vc.append(vc)
+        i_ud.append(ud)
+        i_cid.append(cid)
+        i_uid.append(uid)
+        i_lang.append(lang)
 
         n_video += 1
-      except:
-        pass
+      except Exception as e:
+        logging.warning('Error retrieving videoidlist=%s, url=%s: %r', fn_videoid, url, e, exc_info=True)
 
       # write current result
       if intermediate and (n_video % 100 == 0):
