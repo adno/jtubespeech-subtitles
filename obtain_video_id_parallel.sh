@@ -12,4 +12,4 @@ then
 	LOG="obtain_vid.log"
 fi
 
-parallel --joblog "$LOG" --colsep ',' python scripts/obtain_video_id.py < "$TASKS"
+parallel --gnu --joblog "$LOG" --colsep ',' python scripts/obtain_video_id.py < "$TASKS"
