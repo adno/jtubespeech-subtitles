@@ -22,20 +22,42 @@ def parse_args():
         '--outdir', type=str, default='sub', help='Dirname to save results'
         )
     parser.add_argument(
+        '--outname', type=str, default=None,
+        help='Output filename (default: LANG_sample.csv)'
+        )
+    parser.add_argument(
         '--size', '-n', type=int, default=DEFAULT_SIZE,
         help=f'Sample size (default: {DEFAULT_SIZE})'
         )
-    parser.add_argument(
+
+    sub = parser.add_argument_group('Subtitle conditions (matches any)')
+    sub.add_argument(
         '--auto', action=argparse.BooleanOptionalAction, default=False,
-        help='Get auto subtitles (default: false)'
+        help='Auto subtitles in target language (default: false)'
         )
-    parser.add_argument(
+    sub.add_argument(
         '--manual', action=argparse.BooleanOptionalAction, default=True,
-        help='Get manual subtitles (default: true)'
+        help='Manual subtitles in target language (default: true)'
         )
-    parser.add_argument(
-        '--require-lang', action=argparse.BooleanOptionalAction, default=True,
-        help='Require subtitles to be in the target language (default: true)'
+
+    lang = parser.add_argument_group('Language conditions (matches any)')
+    lang.add_argument(
+        '--video-lang', action=argparse.BooleanOptionalAction, default=True,
+        help='Video in the target language (default: true)'
+        )
+    lang.add_argument(
+        '--any-lang', action=argparse.BooleanOptionalAction, default=False,
+        help='No conditions on language (default: false)'
+        )
+    lang.add_argument(
+        '--sub-lang', action=argparse.BooleanOptionalAction, default=False,
+        help='Manual subtitles only in target language (default: false)'
+        )
+    lang.add_argument(
+        '--sub-lang-video-lang-na', action=argparse.BooleanOptionalAction,
+        default=False,
+        help=('Manual subtitles only in target language and video language is N/A '
+              '(default: false)')
         )
     return parser.parse_args()
 
@@ -52,8 +74,21 @@ def main(args):
     if args.auto:
         cond |= df['auto']
 
-    if args.require_lang:
-        cond &= df['language'].str.startswith(args.lang)
+    assert (
+        args.any_lang or args.video_lang or args.sub_lang or args.sub_lang_video_lang_na
+        )
+    if not args.any_lang:
+        lang_cond = False
+
+        if args.video_lang:
+            lang_cond |= df['language'].str.startswith(args.lang)
+
+        if args.sub_lang:
+            lang_cond |= df['sub'] & (df['nsub'] == 1)
+        elif args.sub_lang_video_lang_na:
+            lang_cond |= df['sub'] & (df['nsub'] == 1) & df['language'].isna()
+
+        cond &= lang_cond
 
     valid = df.loc[cond]
 
@@ -65,10 +100,13 @@ def main(args):
             f'Warning: Data is smaller than the requested sample '
             f'size {len(valid)} < {args.size}.\n'
             )
-    filename = os.path.join(args.outdir, args.lang, f'{args.lang}_sample.csv')
+    filename = os.path.join(
+        args.outdir, args.lang,
+        args.outname or f'{args.lang}_sample.csv'
+        )
 
     # Data is ordered randomly (by video id):
-    valid[:args.size].to_csv(filename)
+    valid[:args.size].to_csv(filename, index=None)
 
     print(f"Saved {args.lang.upper()} sample to {filename}.")
 
