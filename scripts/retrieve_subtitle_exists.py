@@ -27,7 +27,7 @@ def parse_args():
 
 
 COLS = [
-  'videoid', 'auto', 'sub', 'categories', 'duration',
+  'videoid', 'auto', 'sub', 'nsub', 'categories', 'duration',
   'view_count', 'upload_date', 'channel_id', 'uploader_id', 'language'
   ]
 
@@ -37,16 +37,17 @@ def retrieve_subtitle_exists(lang, fn_videoid, outdir="sub", wait_sec=0.0,
   fn_sub.parent.mkdir(parents=True, exist_ok=True)
 
   # all info fields:
-  i_vid = []
-  i_auto = []
-  i_sub = []
-  i_cat = []
-  i_dur = []
-  i_vc = []
-  i_ud = []
-  i_cid = []
-  i_uid = []
-  i_lang = []
+  data_vid = []
+  data_auto = []
+  data_sub = []
+  data_nsub = [] # number of manual sub languages
+  data_cat = []
+  data_dur = []
+  data_vc = []
+  data_ud = []
+  data_cid = []
+  data_uid = []
+  data_lang = []
 
   # if file exists, load it and restart retrieving.
   if fn_checkpoint is None:
@@ -94,43 +95,47 @@ def retrieve_subtitle_exists(lang, fn_videoid, outdir="sub", wait_sec=0.0,
         info = ydl.extract_info(url, download=False)
         auto_lang = info['automatic_captions']
         manu_lang = info['subtitles']
-        cat = '|'.join(info['categories'])
-        dur = info['duration']
-        vc = info['view_count']
-        ud = info['upload_date']
-        cid = info['channel_id']
-        uid = info['uploader_id']
-        lang = info['language']
+        i_cat = '|'.join(info['categories'])
+        i_dur = info['duration']
+        i_vc = info['view_count']
+        i_ud = info['upload_date']
+        i_cid = info['channel_id']
+        i_uid = info['uploader_id']
+        i_lang = info['language']
 
         # Exceptions should not happen here:
-        i_vid.append(videoid)
-        i_auto.append(lang in auto_lang)
-        i_sub.append(lang in manu_lang)
-        i_cat.append(cat)
-        i_dur.append(dur)
-        i_vc.append(vc)
-        i_ud.append(ud)
-        i_cid.append(cid)
-        i_uid.append(uid)
-        i_lang.append(lang)
+
+        data_vid.append(videoid)
+        data_auto.append(lang in auto_lang)
+        data_sub.append(lang in manu_lang)
+        data_nsub.append(len(manu_lang))
+        data_cat.append(i_cat)
+        data_dur.append(i_dur)
+        data_vc.append(i_vc)
+        data_ud.append(i_ud)
+        data_cid.append(i_cid)
+        data_uid.append(i_uid)
+        data_lang.append(i_lang)
 
         n_video += 1
+
       except Exception as e:
         logging.warning('Error retrieving videoidlist=%s, url=%s: %r', fn_videoid, url, e, exc_info=True)
 
       # write current result
       if intermediate and (n_video % 100 == 0):
         df = pd.DataFrame({
-          'videoid': i_vid,
-          'auto': i_auto,
-          'sub': i_sub,
-          'categories': i_cat,
-          'duration': i_dur,
-          'view_count': i_vc,
-          'upload_date': i_ud,
-          'channel_id': i_cid,
-          'uploader_id': i_uid,
-          'language': i_lang
+          'videoid': data_vid,
+          'auto': data_auto,
+          'sub': data_sub,
+          'nsub': data_nsub,
+          'categories': data_cat,
+          'duration': data_dur,
+          'view_count': data_vc,
+          'upload_date': data_ud,
+          'channel_id': data_cid,
+          'uploader_id': data_uid,
+          'language': data_lang
           })
         df.to_csv(fn_sub, index=None, header=header)
 
@@ -141,16 +146,17 @@ def retrieve_subtitle_exists(lang, fn_videoid, outdir="sub", wait_sec=0.0,
   # write
 
   df = pd.DataFrame({
-    'videoid': i_vid,
-    'auto': i_auto,
-    'sub': i_sub,
-    'categories': i_cat,
-    'duration': i_dur,
-    'view_count': i_vc,
-    'upload_date': i_ud,
-    'channel_id': i_cid,
-    'uploader_id': i_uid,
-    'language': i_lang
+    'videoid': data_vid,
+    'auto': data_auto,
+    'sub': data_sub,
+    'nsub': data_nsub,
+    'categories': data_cat,
+    'duration': data_dur,
+    'view_count': data_vc,
+    'upload_date': data_ud,
+    'channel_id': data_cid,
+    'uploader_id': data_uid,
+    'language': data_lang
     })
   df.to_csv(fn_sub, index=None, header=header)
   return fn_sub
