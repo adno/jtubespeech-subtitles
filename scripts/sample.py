@@ -5,6 +5,24 @@ import os
 
 DEFAULT_SIZE = 120_000
 
+CATEGORIES = {
+    'autos': 'Autos & Vehicles',
+    'comedy': 'Comedy',
+    'education': 'Education',
+    'entertainment': 'Entertainment',
+    'film': 'Film & Animation',
+    'gaming': 'Gaming',
+    'howto': 'Howto & Style',
+    'music': 'Music',
+    'news': 'News & Politics',
+    'nonprofits': 'Nonprofits & Activism',
+    'people': 'People & Blogs',
+    'pets': 'Pets & Animals',
+    'science': 'Science & Technology',
+    'sports': 'Sports',
+    'travel': 'Travel & Events'
+    }
+
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -28,6 +46,10 @@ def parse_args():
     parser.add_argument(
         '--size', '-n', type=int, default=DEFAULT_SIZE,
         help=f'Sample size (default: {DEFAULT_SIZE})'
+        )
+    parser.add_argument(
+        '--dry-run', action='store_true',
+        help=f'Do not output the sample, only count available data'
         )
 
     sub = parser.add_argument_group('Subtitle conditions (matches any)')
@@ -59,11 +81,24 @@ def parse_args():
         help=('Manual subtitles only in target language and video language is N/A '
               '(default: false)')
         )
+
+    parser.add_argument(
+        '--categories', '-c', nargs='+', choices=CATEGORIES, default=None,
+        help='Limit to certain categories (default: all)'
+        )
+
     return parser.parse_args()
 
 
 def main(args):
-    df = pd.read_csv(args.subdata)
+    df = pd.read_csv(
+        args.subdata,
+        dtype={
+            'videoid': str, 'auto': bool, 'sub': bool, 'nsub': int, 'categories': str,
+            'duration': int, 'view_count': int, 'upload_date': int, 'channel_id': str,
+            'uploader_id': str, 'language': str
+            }
+        )
 
     assert len(args.lang) == 2, args.lang
 
@@ -90,25 +125,33 @@ def main(args):
 
         cond &= lang_cond
 
+    if args.categories is not None:
+        categories = set(map(CATEGORIES.get, args.categories))
+        cat_cond = df['categories'].apply(lambda c: c in categories)
+        cond &= cat_cond
+
     valid = df.loc[cond]
 
     sys.stderr.write(
-        f'Valid data size: {len(valid)}\n'
+        f'All data:   {len(df)}\n'
+        f'Valid data: {len(valid)}\n'
         )
     if len(valid) < args.size:
         sys.stderr.write(
             f'Warning: Data is smaller than the requested sample '
             f'size {len(valid)} < {args.size}.\n'
             )
-    filename = os.path.join(
-        args.outdir, args.lang,
-        args.outname or f'{args.lang}_sample.csv'
-        )
 
-    # Data is ordered randomly (by video id):
-    valid[:args.size].to_csv(filename, index=None)
+    if not args.dry_run:
+        filename = os.path.join(
+            args.outdir, args.lang,
+            args.outname or f'{args.lang}_sample.csv'
+            )
 
-    print(f"Saved {args.lang.upper()} sample to {filename}.")
+        # Data is ordered randomly (by video id):
+        valid[:args.size].to_csv(filename, index=None)
+
+        print(f"Saved {args.lang.upper()} sample to {filename}.")
 
 
 if __name__ == '__main__':
