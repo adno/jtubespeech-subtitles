@@ -1,17 +1,48 @@
 import re
 from datetime import datetime as dt
 from pathlib import Path
+from collections.abc import Iterable
 import subprocess
+
 
 # YouTube video URL
 def make_video_url(videoid: str) -> str:
   return f"https://www.youtube.com/watch?v={videoid}"
 
-
-# YouTube Search URL
-def make_query_url(query: str) -> str:
+# YouTube/Google Search URL
+def make_query_url(query: str, google: bool = False, index: int = 0) -> str:
   q = query.rstrip("\n").strip(" ").replace(" ", "+")
-  return f"https://www.youtube.com/results?search_query={q}&sp=EgQQASgB"
+  if not google:
+    assert index == 0
+    # sp=EgQQASgB == with subtitles
+    return f"https://www.youtube.com/results?search_query={q}&sp=EgQQASgB"
+  else:
+    # Google video search
+    # tbs=cc:1  with subtitles
+    # srcf:...  source is YouTube
+    # num=100   100 results per page
+    # start=N   start at Nth result
+    return (
+      f'https://www.google.com/search?q=hippo&tbm=vid&tbs=cc:1,srcf:'
+      f'H4sIAAAAAAAAAC3LMQ6AIAwF0NuwGDt4o0IgqaZ8gm0It1eJ4xveNuHm'
+      f'MVOCBkWFcceC1ALlbi_1obCEKGvfrF8R4d-L0YRSdNY_17WO8B3F8UT1IAAAA&num=100&'
+      f'start={index*100}'
+      )
+
+
+def html2videoids(html: bytes, google: bool = False) -> Iterable[str]:
+  '''
+  Extract videoids from search result page (may not be unique).
+  '''
+  if not google:
+    return [
+      x.split(":")[1].strip("\"").strip(" ")
+      for x in re.findall(r"\"videoId\":\"[\w\_\-]+?\"", str(html))
+      ]
+  else:
+    return re.findall(
+      r'/url\?q=https://(?:www|m)\.youtube\.com/watch%3Fv%3D([^&%]+)[&%]', str(html)
+      )
 
 
 # Wikipedia dump file URL
@@ -54,7 +85,7 @@ def vtt2txt(vtt: list) -> list:
       st = count_total_second(dt.strptime(m.groups()[0], "%H:%M:%S.%f"))
       et = count_total_second(dt.strptime(m.groups()[1], "%H:%M:%S.%f"))
       txt.append([st, et, ""])
-      is_started = True   
+      is_started = True
     elif is_started:
       v = _normalize_text(v)
       if len(v) == 0:
@@ -92,7 +123,7 @@ def autovtt2txt(vtt: list) -> list:
       line = _normalize_text(line)
       if len(line) == 0 or "<" not in line:
         continue
-      
+
       head = line.split("<")[0]
       body = re.sub(f"^{head}", "", line)
       m = re.findall(r"<\d+\:\d+\:\d+\.\d+><c>(.+?)</c>", body)
