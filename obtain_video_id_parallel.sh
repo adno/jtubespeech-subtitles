@@ -1,5 +1,15 @@
 #!/bin/bash
 
+OPT="$1"
+if [ "$OPT" == '--google' ]
+then
+	OPTIONS='--google --outdir videoid-google'
+	shift
+else
+	OPTIONS=''
+fi
+
+
 TASKS="$1"
 if [ -z "$TASKS" ]
 then
@@ -12,4 +22,4 @@ then
 	LOG="obtain_vid.log"
 fi
 
-parallel --gnu --joblog "$LOG" --colsep ',' python scripts/obtain_video_id.py < "$TASKS"
+parallel --gnu --joblog "$LOG" --colsep ',' python scripts/obtain_video_id.py $OPTIONS < "$TASKS"
