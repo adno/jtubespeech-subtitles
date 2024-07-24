@@ -74,7 +74,7 @@ def retrieve_subtitle_exists(lang, fn_videoid, outdir="sub", wait_sec=0.0,
                          'when': 'playlist'}],
      'retries': 10,
      'skip_download': True,
-     'subtitleslangs': [f'{lang}']}
+     'subtitleslangs': [lang]}
   with YoutubeDL(ydl_opts) as ydl:
     # load video ID list
     n_video = 0

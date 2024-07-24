@@ -79,6 +79,12 @@ do
 	then
 		cat sub/${lang}/${lang}_*.csv > sub/${lang}/${lang}.csv
 		python scripts/sample.py ${lang} sub/${lang}/${lang}.csv
+		
+		for c in autos comedy education entertainment film gaming howto \
+			music news nonprofits people pets science sports travel
+		do
+			python scripts/sample.py ${lang} sub/${lang}/${lang}.csv -c "$c" --outname "${lang}-cat-${c}.csv"
+		done		
 	fi
 	
 	# sample saved in sub/${lang}/${lang}_sample.csv

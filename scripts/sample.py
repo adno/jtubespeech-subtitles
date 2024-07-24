@@ -116,7 +116,9 @@ def main(args):
         lang_cond = False
 
         if args.video_lang:
-            lang_cond |= df['language'].str.startswith(args.lang)
+            # Match both e.g. 'zh' and 'zh-Hant', 'zh-HK', …
+            # ... == True => ignore NAs
+            lang_cond |= df['language'].str.match(f'{args.lang}(-|$)') == True
 
         if args.sub_lang:
             lang_cond |= df['sub'] & (df['nsub'] == 1)

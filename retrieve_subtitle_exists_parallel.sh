@@ -10,12 +10,12 @@
 # done
 # 
 
-# for lang in en ja ps es fr pt zh it pl de ru cs
+# for lang in en ja ps es fr pt zh it pl de ru cs id ur
 # do
 # 	cat videoid/${lang}/${lang}wiki-latest-pages-articles-multistream-index_part*.txt \
 # 		| sort -u > videoid/${lang}/${lang}.txt
 # done
-# for lang in en ja ps es # fr pt zh it pl de ru cs
+# for lang in en ja ps es # fr pt zh it pl de ru cs id ur
 # do
 # 	# 4k items can run in reasonable time: 4000 * 3 s = 3h 20min
 # 	split -l 4000 -d -a 6 videoid/${lang}/${lang}.txt videoid/${lang}/${lang}_part
@@ -29,6 +29,17 @@
 # 	done
 # done
 # ) > videoid/tasks_jaenpses.csv
+# (
+# for lang in id ur
+# do
+# 	for file in videoid/${lang}/${lang}_part*
+# 	do
+# 		echo "${lang},${file}"
+# 	done
+# done
+# ) > videoid/tasks_idur.csv
+
+
 # split -l 96 -d -a 6 videoid/tasks_jaenpses.csv videoid/tasks_jaenpses_part
 # for lang in fr pt zh it pl de ru cs
 # do
@@ -40,6 +51,8 @@
 # 	) > "videoid/tasks_${lang}.csv"
 # 	split -l 96 -d -a 6 "videoid/tasks_${lang}.csv" "videoid/tasks_${lang}_part"
 # done
+# split -l 96 -d -a 6 videoid/tasks_idur.csv videoid/tasks_idur_part
+
 
 if [ "$1" = '--lang' ] || [ "$1" = '--language' ]
 then

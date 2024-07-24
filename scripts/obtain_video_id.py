@@ -6,9 +6,6 @@ from pathlib import Path
 from util import make_query_url, html2videoids
 from tqdm import tqdm
 
-# https://www.google.com/search?q=hippo&tbm=vid&tbs=cc:1,srcf:H4sIAAAAAAAAAC3LMQ6AIAwF0NuwGDt4o0IgqaZ8gm0It1eJ4xveNuHmMVOCBkWFcceC1ALlbi_1obCEKGvfrF8R4d-L0YRSdNY_17WO8B3F8UT1IAAAA&num=100
-# ids = re.findall(r'/url\?q=https://www\.youtube\.com/watch%3Fv%3D([^&]+)&amp;', s)
-
 def parse_args():
   parser = argparse.ArgumentParser(
     description="Obtaining video IDs from search words",
